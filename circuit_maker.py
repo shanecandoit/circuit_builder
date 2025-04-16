@@ -3,34 +3,25 @@ import random
 import json
 
 # gates
-GATE_FUNCTIONS = {
-    'NOT': lambda a: 1 - a,
-    'AND': lambda a, b: a & b,
-    'OR': lambda a, b: a | b,
-    'NAND': lambda a, b: 1 - (a & b),
-    'NOR': lambda a, b: 1 - (a | b),
-    'XOR': lambda a, b: a ^ b,
-    'XNOR': lambda a, b: 1 - (a ^ b)
-}
-GATE_TYPES = list(GATE_FUNCTIONS.keys())
-GATE_ARITY = {
-    'NOT': 1,
-    'AND': 2,
-    'OR': 2,
-    'NAND': 2,
-    'NOR': 2,
-    'XOR': 2,
-    'XNOR': 2
-}
+class GateLogic:
+    GATE_FUNCTIONS = {
+        'AND': lambda a, b: a & b,
+        'OR': lambda a, b: a | b,
+        'NAND': lambda a, b: 1 - (a & b),
+        'NOR': lambda a, b: 1 - (a | b),
+        'XOR': lambda a, b: a ^ b,
+        'XNOR': lambda a, b: 1 - (a ^ b)
+    }
+    GATE_TYPES = list(GATE_FUNCTIONS.keys())
+
 class Circuit:
     """Circuit class.
     Each circuit has some inputs, outputs, and gates.
     Gates are added sequentially. When a gate is added, its inputs are randomly
     selected from the pool of available nodes (primary inputs + outputs of preceding gates)."""
-    def __init__(self, num_inputs, num_outputs, num_gates):
+    def __init__(self, num_inputs, num_target_classes, num_gates):
         self.num_inputs = num_inputs
-        # num_outputs is now less critical for evaluation itself, but defines the target shape
-        self.num_target_classes = num_outputs
+        self.num_target_classes = num_target_classes
         self.num_gates = num_gates
         self.gates = [] # List to store (gate_type, input_idx1, [input_idx2])
 
@@ -40,30 +31,19 @@ class Circuit:
 
         for i in range(num_gates):
             # Randomly select a gate type
-            gate_type = random.choice(GATE_TYPES)
-            arity = GATE_ARITY[gate_type]
+            gate_type = random.choice(GateLogic.GATE_TYPES)
+            #arity = GateLogic.GATE_ARITY[gate_type]
 
             # Ensure we have enough available nodes for the gate's inputs
-            if num_available_nodes < arity:
-                # Fallback if not enough nodes (e.g., force NOT gate if possible)
-                if num_available_nodes >= 1:
-                    gate_type = 'NOT'
-                    arity = 1
-                else:
-                    # This case should ideally not happen with valid inputs
-                    # Or handle by allowing connection to constants (0 or 1) if needed
-                    raise ValueError("Cannot create gate, not enough input nodes available.")
+            if num_available_nodes < 2:
+                raise ValueError("Cannot create gate, not enough input nodes available.")
 
             # Randomly select input node indices for the current gate.
             # Inputs are chosen from the pool of all available nodes created so far:
             # - Indices 0 to num_inputs-1 represent the primary circuit inputs.
             # - Indices num_inputs to num_available_nodes-1 represent the outputs of previously added gates.
-            inputs = random.sample(range(num_available_nodes), arity)
-
-            if arity == 1:
-                self.gates.append((gate_type, inputs[0]))
-            else:  # arity == 2
-                self.gates.append((gate_type, inputs[0], inputs[1]))
+            inputs = random.sample(range(num_available_nodes), 2)
+            self.gates.append((gate_type, inputs[0], inputs[1]))
 
             # The output of this gate becomes a new available node
             num_available_nodes += 1
@@ -105,24 +85,16 @@ class Circuit:
         # Evaluate gates sequentially
         for i, gate_info in enumerate(self.gates):
             gate_type = gate_info[0]
-            gate_func = GATE_FUNCTIONS[gate_type]
-            arity = GATE_ARITY[gate_type]
+            gate_func = GateLogic.GATE_FUNCTIONS[gate_type]
             # The index where the output of the i-th gate will be stored
             gate_output_index = self.num_inputs + i
-
-            if arity == 1:
-                input_idx = gate_info[1]
-                if input_idx < len(node_values):
-                    input_val = node_values[input_idx]
-                    node_values[gate_output_index] = int(gate_func(input_val))
-            else:  # arity == 2
-                input_idx1 = gate_info[1]
-                input_idx2 = gate_info[2]
-                if input_idx1 < len(node_values) and input_idx2 < len(node_values):
-                    input_val1 = node_values[input_idx1]
-                    input_val2 = node_values[input_idx2]
-                    gate_output = int(gate_func(input_val1, input_val2))
-                    node_values[gate_output_index] = gate_output
+            input_idx1 = gate_info[1]
+            input_idx2 = gate_info[2]
+            if input_idx1 < len(node_values) and input_idx2 < len(node_values):
+                input_val1 = node_values[input_idx1]
+                input_val2 = node_values[input_idx2]
+                gate_output = int(gate_func(input_val1, input_val2))
+                node_values[gate_output_index] = gate_output
 
         # Return the values of ALL nodes
         return node_values
@@ -177,18 +149,17 @@ class Circuit:
 
 class CircuitFactory:
     """Circuit factory to build multiple random circuits."""
-    def __init__(self, num_inputs, num_outputs, num_gates):
+    def __init__(self, num_inputs, num_target_classes, num_gates):
         self.num_inputs = num_inputs
-        # num_outputs now corresponds to the number of target classes
-        self.num_outputs = num_outputs
         self.num_gates = num_gates
+        self.num_target_classes = num_target_classes
 
     def build_circuits(self, num_circuits):
         """Builds a list of random circuits."""
         circuits = []
         for _ in range(num_circuits):
             # Pass num_outputs as the number of target classes
-            circuit = Circuit(self.num_inputs, self.num_outputs, self.num_gates)
+            circuit = Circuit(self.num_inputs, self.num_target_classes, self.num_gates)
             circuits.append(circuit)
         return circuits
 
@@ -241,6 +212,106 @@ class CircuitFactory:
             print("I/O error")
         print("-" * 20)
 
+    def write_report_html(self, filename="circuit_report.html", circuits=None, data=None, targets=None):
+        """
+        Writes an HTML report containing a table for each circuit,
+        showing the output wires and their scores for each target class.
+        """
+        if not isinstance(circuits, list) or not circuits:
+            print("Error write_report_html: No circuits provided.")
+            return
+        if not isinstance(data, np.ndarray) or data.size == 0:
+            print("Error write_report_html: No data provided.")
+            return
+        if not targets.size == 0 and not isinstance(targets, np.ndarray):
+            print("Error write_report_html: targets must be a numpy array.")
+            return
+        if len(data) != len(targets):
+            raise ValueError("Number of data points must match number of targets.")
+
+        num_target_classes = circuits[0].num_target_classes if circuits else 0
+        total_nodes = circuits[0].total_nodes if circuits else 0
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Circuit Report</title>
+            <style>
+                table {{
+                    border-collapse: collapse;
+                    width: 100%;
+                }}
+                th, td {{
+                    border: 1px solid black;
+                    padding: 8px;
+                    text-align: center;
+                }}
+                th {{
+                    background-color: #f2f2f2;
+                }}
+            </style>
+        </head>
+        <body>
+            <h1>Circuit Report</h1>
+        """
+
+        for i, circuit in enumerate(circuits):
+            score_matrix = circuit.score(data, targets)
+ 
+            # Find the best score for each class
+            best_scores = np.max(score_matrix[circuit.num_inputs:circuit.total_nodes], axis=0)
+            best_nodes = np.argmax(score_matrix[circuit.num_inputs:circuit.total_nodes], axis=0) + circuit.num_inputs
+ 
+            html_content += f"""
+            <h2>Circuit {i}</h2>
+            <table>
+                <tr>
+                    <th>Output Wire</th>
+        """
+            for class_idx in range(num_target_classes):
+                html_content += f"<th>Class {class_idx}</th>"
+            html_content += "</tr>"
+ 
+            for node_idx in range(circuit.num_inputs, circuit.total_nodes):  # Iterate over output wires
+                html_content += "<tr>"
+                output_wire_style = ""
+                html_content += f"<td>"
+                for class_idx in range(num_target_classes):
+                    if node_idx == best_nodes[class_idx]:
+                        output_wire_style = '<b><span style="color: green;">'
+                        break
+                if output_wire_style:
+                    html_content += f"{output_wire_style}{node_idx}</span></b>"
+                else:
+                    html_content += f"{node_idx}"
+                html_content += f"</td>"  # Output wire number
+ 
+                for class_idx in range(num_target_classes):
+                    score = score_matrix[node_idx, class_idx]
+                    score_style = ""
+                    if node_idx == best_nodes[class_idx]:
+                        score_style = '<b><span style="color: green;">'
+                    if score_style:
+                        html_content += f"<td>{score_style}{score:.3f}</span></b></td>"  # Score for this class
+                    else:
+                        html_content += f"<td>{score:.3f}</td>"  # Score for this class
+                html_content += "</tr>"
+ 
+            html_content += "</table><br><br>"
+
+        html_content += """
+        </body>
+        </html>
+        """
+
+        try:
+            with open(filename, 'w') as outfile:
+                outfile.write(html_content)
+            print(f"HTML report written to {filename}")
+        except IOError:
+            print("I/O error")
+
     def clean_up(self, circuits, data, targets):
         """
         Removes the worst-performing gates from a circuit, focusing on the gates
@@ -274,11 +345,8 @@ class CircuitFactory:
                 # Identify gates with unused outputs
                 used_nodes = set(range(circuit.num_inputs))  # Start with input nodes
                 for i, gate in enumerate(circuit.gates):
-                    if GATE_ARITY[gate[0]] == 1:
-                        used_nodes.add(gate[1])
-                    else:
-                        used_nodes.add(gate[1])
-                        used_nodes.add(gate[2])
+                    used_nodes.add(gate[1])
+                    used_nodes.add(gate[2])
 
                 for i in range(len(circuit.gates)):
                     gate_output_idx = circuit.num_inputs + i
@@ -360,14 +428,10 @@ class CircuitFactory:
         if 0 <= gate_index < len(circuit.gates):
             gate = circuit.gates[gate_index]
             gate_type = gate[0]
-            if GATE_ARITY[gate_type] == 1:
-                input_idx = gate[1]
-                self._trace_gates(circuit, input_idx, relevant_gates)
-            else:
-                input_idx1 = gate[1]
-                input_idx2 = gate[2]
-                self._trace_gates(circuit, input_idx1, relevant_gates)
-                self._trace_gates(circuit, input_idx2, relevant_gates)
+            input_idx1 = gate[1]
+            input_idx2 = gate[2]
+            self._trace_gates(circuit, input_idx1, relevant_gates)
+            self._trace_gates(circuit, input_idx2, relevant_gates)
 
     def _update_gate_indices(self, circuit):
        """
@@ -377,11 +441,7 @@ class CircuitFactory:
        for i in range(len(circuit.gates)):
            gate = circuit.gates[i]
            gate_type = gate[0]
-           if GATE_ARITY[gate_type] == 1:
-               input_idx = gate[1]
-               circuit.gates[i] = (gate_type, input_idx - gates_removed_count)
-           else:
-               input_idx1 = gate[1]
-               input_idx2 = gate[2]
-               circuit.gates[i] = (gate_type, input_idx1 - gates_removed_count, input_idx2 - gates_removed_count)
+           input_idx1 = gate[1]
+           input_idx2 = gate[2]
+           circuit.gates[i] = (gate_type, input_idx1 - gates_removed_count, input_idx2 - gates_removed_count)
            gates_removed_count += 1

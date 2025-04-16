@@ -42,11 +42,11 @@ min             4.300000          2.000000           1.000000          0.100000
 max             7.900000          4.400000           6.900000          2.500000
 """
 
-iris_df.to_csv('iris.csv', index=False)
+iris_df.to_csv('datasets/iris.csv', index=False)
 
 # One-hot encode the target
 iris_df = pd.get_dummies(iris_df, columns=['target'], prefix='target', dtype=int)
-# iris_df.to_csv('datasets/iris_onehot.csv', index=False)
+iris_df.to_csv('datasets/iris_onehot.csv', index=False)
 
 # make a new dataframe with numbers in quartiles, so its binary
 iris_df_binary = iris_df.copy()

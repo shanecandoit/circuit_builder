@@ -176,7 +176,7 @@ def iris_binary_test():
     circuit_factory.update(circuits, data, targets)
 
     # write report before cleaning up the circuits
-    json_file = "iris_binary_circuits_detailed_scores_before_clean_up.json"
+    json_file = "reports/iris_binary_circuits_detailed_scores_before_clean_up.json"
     circuit_factory.write_report(json_file, circuits, data, targets)
     print(f"\nCircuit data written to {json_file}")
 
@@ -184,7 +184,7 @@ def iris_binary_test():
     circuit_factory.clean_up(circuits, data, targets)
 
     # write report after cleaning up the circuits
-    json_file = "iris_binary_circuits_detailed_scores.json"
+    json_file = "reports/iris_binary_circuits_detailed_scores.json"
     circuit_factory.write_report(json_file, circuits, data, targets)
     print(f"\nCircuit data written to {json_file}")
 
@@ -226,10 +226,17 @@ def iris_binary_test():
         average_accuracy_of_all_circuits += np.sum(max_accuracy_per_class)
     average_accuracy_of_all_circuits /= len(circuits)
     print(f"Average accuracy of all circuits #1: {average_accuracy_of_all_circuits}")
+    score_per_class = average_accuracy_of_all_circuits / num_target_classes
+    print(f"Average score per class: {score_per_class}")
 
+    # html report
+    count = len(circuits)
+    circuit_factory.write_report_html(f"reports/iris_binary_circuits_{count}_detailed_scores.html", circuits, data, targets)
+
+    # remove the worst circuits
     circuit_count = len(circuits)
     print(f"Number of circuits: {circuit_count}")
-    number_of_circuits_to_remove = circuit_count // 4 # remove 1/4 of the circuits
+    number_of_circuits_to_remove = circuit_count // 10 # remove bottom tenth of the circuits
     keep_at_least = 50
     keeping = circuit_count - number_of_circuits_to_remove
     print(f"Number of circuits to keep: {keeping}")
@@ -247,6 +254,12 @@ def iris_binary_test():
         average_accuracy_of_all_circuits += np.sum(max_accuracy_per_class)
     average_accuracy_of_all_circuits /= len(circuits)
     print(f"Average accuracy of all circuits #2: {average_accuracy_of_all_circuits}")
+    score_per_class = average_accuracy_of_all_circuits / num_target_classes
+    print(f"Average score per class: {score_per_class}")
+
+    # html report
+    count = len(circuits)
+    circuit_factory.write_report_html(f"reports/iris_binary_circuits_{count}_detailed_scores.html", circuits, data, targets)
 
 
 
@@ -256,16 +269,21 @@ if __name__ == "__main__":
     iris_binary_test()
 
 """ iris_binary_test output:
-Best Circuit ID: 318
-Best Circuit Score: 2.82
-Best Circuit Gates: [('OR', 0, 7), ('NOT', 7), ('NAND', 12, 13), ('XNOR', 11, 12), ('NOT', 0), ('XOR', 14, 12), ('XOR', 4, 5), ('XNOR', 17, 4), ('NOT', 5), ('XNOR', 21, 20), ('NOR', 4, 3), ('NOR', 26, 6), ('XNOR', 27, 16), ('NAND', 27, 17), ('AND', 15, 17), ('XNOR', 8, 24), ('NAND', 8, 27), ('OR', 13, 12), ('XNOR', 0, 19), ('XOR', 23, 27), ('NOR', 10, 2), ('NAND', 25, 2), ('OR', 34, 22), ('AND', 6, 11), ('AND', 16, 13), ('OR', 33, 17), ('NOR', 35, 5), ('NOT', 33), ('XOR', 19, 27), ('OR', 6, 9), ('OR', 11, 7), ('NOT', 24), ('XOR', 15, 29), ('NOR', 43, 5), ('NAND', 48, 45), ('NOT', 19), ('NOR', 45, 46), ('AND', 50, 24), ('OR', 40, 33), ('NOT', 5), ('XOR', 26, 46), ('OR', 37, 22), ('OR', 47, 52), ('NOR', 51, 40), ('XOR', 23, 36), ('OR', 10, 4), ('NOR', 15, 31), ('NOR', 48, 12), ('NOT', 26), ('XNOR', 52, 24)]
+Best Circuit ID: 40
+Best Circuit Score: 2.8533333333333335
+Best Circuit Gates: [('NOR', 8, 7), ('OR', 4, 7), ('AND', 8, 7), ('XOR', 13, 12), ('OR', 4, 19), ('NOR', 0, 5), ('NOR', 15, 4), ('XNOR', 16, 17), ('XNOR', 10, 15), ('NAND', 8, 17), ('XOR', 1, 12), ('AND', 22, 5), ('AND', 6, 26), ('NAND', 15, 26), ('XNOR', 3, 14), ('XNOR', 10, 8), ('NAND', 23, 16), ('NAND', 1, 26), ('AND', 22, 12), ('XOR', 34, 11), ('NAND', 22, 20), ('XNOR', 32, 31), ('XNOR', 28, 5), ('NOR', 18, 29), ('XNOR', 9, 10), ('XNOR', 21, 26), ('XNOR', 39, 36), ('NOR', 4, 5), ('OR', 21, 14), ('NAND', 20, 41), ('NAND', 45, 17), ('XOR', 41, 25), ('NAND', 28, 23), ('XNOR', 37, 33), ('NOR', 26, 10), ('OR', 1, 8), ('XNOR', 15, 42), ('NAND', 47, 44), ('XNOR', 5, 13), ('OR', 25, 6), ('AND', 4, 30), ('XOR', 3, 1), ('NOR', 33, 48), ('AND', 6, 16), ('XOR', 9, 5), ('XNOR', 59, 56), ('NOR', 19, 14), ('OR', 47, 18), ('NOR', 16, 21), ('AND', 4, 45)]
 Best Circuit Designated Output Indices: [63, 64, 65]
-Max accuracy per class: [0.86666667 0.86       0.96      ]
-Best node index per class: [13 14 15]
-Average accuracy of all circuits #1: 2.697453333333337
+Max accuracy per class: [0.87333333 0.86       0.96      ]
+Best node index per class: [52 14 15]
+Average accuracy of all circuits #1: 2.6970266666666673
+Average score per class: 0.8990088888888891
+HTML report written to reports/iris_binary_circuits_500_detailed_scores.html
 Number of circuits: 500
-Number of circuits to remove: 125
-Average accuracy of all circuits #2: 2.693724444444422
+Number of circuits to keep: 450
+Number of circuits to remove: 50
+Average accuracy of all circuits #2: 2.6955259259259186
+Average score per class: 0.8985086419753062
+HTML report written to reports/iris_binary_circuits_450_detailed_scores.html
 
 we see that the accuracy dropped a bit, but not much.
 we should find the median accuracy of the circuits and remove the worst ones.

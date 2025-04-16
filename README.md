@@ -21,7 +21,6 @@ The following logic gates are used in the circuits:
 
 | Gate        | Description |
 | ----------- | ----------- |
-| NOT(a)      | 1 - a       |
 | AND(a, b)   | a & b       |
 | OR(a, b)    | a \| b      |
 | NAND(a, b)  | 1 - (a & b) |
@@ -78,3 +77,7 @@ The JSON files contain data for each circuit, including the gates used, the desi
         ]
 }
 ```
+
+## LICENSE
+
+This project is licensed under the AGPLv3 license. Other arrangements avaiable, email me.
